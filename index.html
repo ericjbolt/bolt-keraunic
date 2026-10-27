@@ -10,13 +10,13 @@
 <title>Bolt Keraunic</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500&family=Figtree:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600&display=swap">
 <style>
 /* Layout: one calm column. Big current reading, then hourly strip, then week, then live maps. */
 :root{
   --bg:#EDF1F4; --surface:#FFFFFF; --fg:#16212B; --muted:#5D6B78; --line:#D5DDE4;
   --accent:#1F6F8B; --accent-soft:#DCEBF1; --warn:#B4541A; --warn-soft:#FBE9DD;
-  --display:"Fraunces", Georgia, "Times New Roman", serif;
+  --display:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
   --body:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme:light;
 }
@@ -120,8 +120,11 @@ footer a{color:var(--muted)}
 
   <footer>
     <p style="margin:0 0 6px"><b>Keraunic</b> (adjective): relating to lightning. The keraunic number is the count of thunderstorm days a place has each year.</p>
-    Forecast and air quality: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Weather data by Open-Meteo.com</a> (CC BY 4.0).
-    United States alerts: National Weather Service. Global maps: earth.nullschool.net (opens in a new tab).
+    <p style="margin:0 0 6px">Forecast, air quality, and city search: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Weather data by Open-Meteo.com</a> (CC BY 4.0).
+    United States alerts: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>.
+    ZIP code lookup: <a href="https://zippopotam.us/" target="_blank" rel="noopener">Zippopotam.us</a>.
+    Global maps: <a href="https://earth.nullschool.net/" target="_blank" rel="noopener">earth.nullschool.net</a> (opens in a new tab).</p>
+    <p style="margin:0">Forecasts are provided for general information only. For official watches and warnings, consult the <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>.</p>
   </footer>
 </div>
 
