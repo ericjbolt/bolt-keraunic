@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bolt Keraunic">
+<meta name="theme-color" content="#EDF1F4">
+<title>Bolt Keraunic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: one calm column. Big current reading, then hourly strip, then week, then live maps. */
+:root{
+  --bg:#EDF1F4; --surface:#FFFFFF; --fg:#16212B; --muted:#5D6B78; --line:#D5DDE4;
+  --accent:#1F6F8B; --accent-soft:#DCEBF1; --warn:#B4541A; --warn-soft:#FBE9DD;
+  --display:"Fraunces", Georgia, "Times New Roman", serif;
+  --body:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0D1318; --surface:#151E25; --fg:#E6EDF2; --muted:#93A3B0; --line:#25323C;
+         --accent:#6FB8D3; --accent-soft:#16303B; --warn:#F0A06B; --warn-soft:#3A2416; color-scheme:dark; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--body);
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:20px;
+  padding-block:20px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+header{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:600;letter-spacing:.02em;margin-right:auto}
+form{display:flex;gap:8px;flex:1 1 260px}
+input{flex:1;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg)}
+button{font:inherit;font-weight:500;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.results{display:flex;flex-direction:column;gap:4px}
+.results button{text-align:left}
+.now{display:grid;grid-template-columns:1fr auto;gap:8px 20px;align-items:end;padding-block:12px}
+.place{font-size:15px;color:var(--muted);grid-column:1/-1}
+.temp{font-family:var(--display);font-weight:300;font-size:clamp(84px,22vw,132px);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.cond{font-size:22px;font-weight:500}
+.sub{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.stat{background:var(--surface);padding:12px 14px}
+.stat .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat .v{font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:8px 0 0;font-weight:600}
+.hours{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.hour{flex:0 0 64px;text-align:center;padding:10px 4px;border-radius:12px;background:var(--surface);font-variant-numeric:tabular-nums}
+.hour .t{font-size:13px;color:var(--muted)}
+.hour .i{font-size:22px;line-height:1.6}
+.hour .p{font-size:12px;color:var(--accent);min-height:18px}
+.days{background:var(--surface);border-radius:14px;overflow:hidden}
+.day{display:grid;grid-template-columns:62px 30px 46px 1fr 110px;gap:10px;align-items:center;padding:11px 14px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.day:first-child{border-top:0}
+.day .n{font-weight:500}
+.day .pp{font-size:13px;color:var(--accent)}
+.bar{height:6px;border-radius:3px;background:var(--line);position:relative}
+.bar span{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--warn))}
+.day .r{text-align:right}
+.day .r b{font-weight:600}
+.day .r i{font-style:normal;color:var(--muted);margin-left:8px}
+.alert{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:12px 14px;font-weight:500}
+.alert small{display:block;font-weight:400;color:var(--fg);margin-top:2px}
+.maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.maps a{display:block;padding:14px;border-radius:12px;background:var(--accent-soft);color:var(--fg);text-decoration:none}
+.maps a b{display:block;font-weight:600}
+.maps a span{font-size:13px;color:var(--muted)}
+.status{color:var(--muted)}
+footer{font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+footer a{color:var(--muted)}
+@media (max-width:480px){ .day{grid-template-columns:48px 26px 38px 1fr 92px;gap:8px;padding:10px 12px} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">⚡ Bolt Keraunic</div>
+    <form id="search" autocomplete="off">
+      <input id="q" type="search" placeholder="Search a city or ZIP" aria-label="Search location">
+      <button type="submit" class="primary">Search</button>
+      <button type="button" id="locate" title="Use my location">📍 My location</button>
+    </form>
+  </header>
+  <div id="results" class="results" hidden></div>
+  <div id="status" class="status">Loading forecast…</div>
+
+  <main id="app" hidden>
+    <section class="now">
+      <div class="place" id="place"></div>
+      <div>
+        <div class="temp" id="temp"></div>
+      </div>
+      <div style="text-align:right">
+        <div class="cond" id="cond"></div>
+        <div class="sub" id="feels"></div>
+        <div class="sub" id="hilo"></div>
+      </div>
+    </section>
+
+    <div id="alerts"></div>
+
+    <div class="stats" id="stats"></div>
+
+    <h2>Next 24 hours</h2>
+    <div class="hours" id="hours"></div>
+
+    <h2>7 days</h2>
+    <div class="days" id="days"></div>
+
+    <h2>Live maps</h2>
+    <div class="maps" id="maps"></div>
+  </main>
+
+  <footer>
+    <p style="margin:0 0 6px"><b>Keraunic</b> (adjective): relating to lightning. The keraunic number is the count of thunderstorm days a place has each year.</p>
+    Forecast and air quality: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Weather data by Open-Meteo.com</a> (CC BY 4.0).
+    United States alerts: National Weather Service. Global maps: earth.nullschool.net (opens in a new tab).
+  </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const WMO = {
+  0:["Clear","☀️","🌙"],1:["Mostly clear","🌤️","🌙"],2:["Partly cloudy","⛅","☁️"],3:["Overcast","☁️","☁️"],
+  45:["Fog","🌫️"],48:["Freezing fog","🌫️"],51:["Light drizzle","🌦️"],53:["Drizzle","🌦️"],55:["Heavy drizzle","🌧️"],
+  56:["Freezing drizzle","🌧️"],57:["Freezing drizzle","🌧️"],61:["Light rain","🌦️"],63:["Rain","🌧️"],65:["Heavy rain","🌧️"],
+  66:["Freezing rain","🌧️"],67:["Freezing rain","🌧️"],71:["Light snow","🌨️"],73:["Snow","🌨️"],75:["Heavy snow","❄️"],
+  77:["Snow grains","🌨️"],80:["Showers","🌦️"],81:["Showers","🌧️"],82:["Heavy showers","⛈️"],85:["Snow showers","🌨️"],
+  86:["Snow showers","❄️"],95:["Thunderstorm","⛈️"],96:["Thunderstorm with hail","⛈️"],99:["Thunderstorm with hail","⛈️"]
+};
+const wmo = (c, day=1) => { const w = WMO[c] || ["Unknown","·"]; return {label:w[0], icon:(!day && w[2]) ? w[2] : w[1]}; };
+const compass = d => ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(d/22.5)%16];
+const aqiLabel = a => a<=50?"Good":a<=100?"Moderate":a<=150?"Unhealthy for sensitive groups":a<=200?"Unhealthy":a<=300?"Very unhealthy":"Hazardous";
+const store = { get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}, set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}} };
+
+async function getJSON(url){ const r = await fetch(url); if(!r.ok) throw new Error(r.status); return r.json(); }
+
+async function load(loc){
+  store.set("loc", loc);
+  $("status").hidden = false; $("status").textContent = "Loading forecast for " + loc.name + "…";
+  const {lat, lon} = loc;
+  const fUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
+    `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,uv_index`+
+    `&hourly=temperature_2m,precipitation_probability,weather_code,is_day`+
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset`+
+    `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=7`;
+  const aUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5`;
+  try{
+    const [f, a] = await Promise.all([getJSON(fUrl), getJSON(aUrl).catch(()=>null)]);
+    render(loc, f, a);
+    loadAlerts(lat, lon);
+  }catch(e){
+    const preview = location.protocol !== "https:" && location.protocol !== "http:";
+    $("status").textContent = preview
+      ? "This preview blocks internet access, so the forecast cannot load here. Open the app from its web address (for example, your GitHub Pages link) in Safari or Chrome."
+      : "The forecast could not be loaded (" + (e && e.message ? e.message : "network error") + "). Check your connection and try again.";
+  }
+}
+
+function render(loc, f, a){
+  const c = f.current, d = f.daily, h = f.hourly;
+  const w = wmo(c.weather_code, c.is_day);
+  $("place").textContent = loc.name;
+  $("temp").textContent = Math.round(c.temperature_2m) + "°";
+  $("cond").textContent = w.icon + " " + w.label;
+  $("feels").textContent = "Feels like " + Math.round(c.apparent_temperature) + "°";
+  $("hilo").textContent = "High " + Math.round(d.temperature_2m_max[0]) + "° · Low " + Math.round(d.temperature_2m_min[0]) + "°";
+  const t = s => new Date(s).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+  const stats = [
+    ["Wind", Math.round(c.wind_speed_10m) + " mph " + compass(c.wind_direction_10m)],
+    ["Gusts", Math.round(c.wind_gusts_10m) + " mph"],
+    ["Humidity", c.relative_humidity_2m + "%"],
+    ["Ultraviolet index", (c.uv_index ?? 0).toFixed(0)],
+    ["Pressure", (c.pressure_msl * 0.02953).toFixed(2) + " inHg"],
+    ["Sunrise", t(d.sunrise[0])],
+    ["Sunset", t(d.sunset[0])]
+  ];
+  if (a && a.current && a.current.us_aqi != null) stats.splice(4, 0, ["Air quality", a.current.us_aqi + " · " + aqiLabel(a.current.us_aqi)]);
+  $("stats").innerHTML = stats.map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
+
+  const nowIdx = Math.max(0, h.time.findIndex(x => x >= c.time.slice(0,13)));
+  $("hours").innerHTML = h.time.slice(nowIdx, nowIdx + 24).map((tm, i) => {
+    const j = nowIdx + i, ww = wmo(h.weather_code[j], h.is_day[j]);
+    const label = i === 0 ? "Now" : new Date(tm).toLocaleTimeString([], {hour:"numeric"});
+    const p = h.precipitation_probability[j];
+    return `<div class="hour"><div class="t">${label}</div><div class="i">${ww.icon}</div><div>${Math.round(h.temperature_2m[j])}°</div><div class="p">${p >= 20 ? p + "%" : ""}</div></div>`;
+  }).join("");
+
+  const lo = Math.min(...d.temperature_2m_min), hi = Math.max(...d.temperature_2m_max), span = Math.max(1, hi - lo);
+  $("days").innerHTML = d.time.map((day, i) => {
+    const ww = wmo(d.weather_code[i]);
+    const name = i === 0 ? "Today" : new Date(day + "T12:00").toLocaleDateString([], {weekday:"short"});
+    const mn = d.temperature_2m_min[i], mx = d.temperature_2m_max[i];
+    const p = d.precipitation_probability_max[i];
+    return `<div class="day"><div class="n">${name}</div><div>${ww.icon}</div><div class="pp">${p >= 20 ? p + "%" : ""}</div>
+      <div class="bar" title="${ww.label}"><span style="left:${(mn-lo)/span*100}%;right:${(hi-mx)/span*100}%"></span></div>
+      <div class="r"><b>${Math.round(mx)}°</b><i>${Math.round(mn)}°</i></div></div>`;
+  }).join("");
+
+  const o = `orthographic=${loc.lon.toFixed(2)},${loc.lat.toFixed(2)},3000`;
+  const maps = [
+    ["Wind", "Animated surface wind", `#current/wind/surface/level/${o}`],
+    ["Temperature", "Surface temperature overlay", `#current/wind/surface/level/overlay=temp/${o}`],
+    ["Rain", "Three-hour precipitation", `#current/wind/surface/level/overlay=precip_3hr/${o}`],
+    ["Ocean waves", "Wave height and swell", `#current/ocean/primary/waves/overlay=significant_wave_height/${o}`],
+    ["Smoke and air", "Fine particulate matter", `#current/particulates/surface/level/overlay=pm2.5/${o}`]
+  ];
+  $("maps").innerHTML = maps.map(([n,s,hsh]) => `<a href="https://earth.nullschool.net/${hsh}" target="_blank" rel="noopener"><b>${n}</b><span>${s}</span></a>`).join("");
+
+  $("status").hidden = true; $("app").hidden = false;
+}
+
+async function loadAlerts(lat, lon){
+  $("alerts").innerHTML = "";
+  try{
+    const r = await getJSON(`https://api.weather.gov/alerts/active?point=${lat.toFixed(4)},${lon.toFixed(4)}`);
+    $("alerts").innerHTML = (r.features || []).slice(0,3).map(x =>
+      `<div class="alert">⚠️ ${x.properties.event}<small>${x.properties.headline || ""}</small></div>`).join("");
+  }catch(e){ /* Outside the United States, or the service is unavailable. */ }
+}
+
+$("search").addEventListener("submit", async e => {
+  e.preventDefault();
+  const q = $("q").value.trim(); if(!q) return;
+  $("status").hidden = true;
+  try{
+    const isZip = /^\d{5}$/.test(q);
+    let list = [];
+    if (isZip){
+      // United States ZIP code: try Zippopotam first, then Open-Meteo restricted to the United States.
+      try{
+        const z = await getJSON(`https://api.zippopotam.us/us/${q}`);
+        list = (z.places || []).map(p => ({name:p["place name"], admin1:p["state"], country_code:"US " + q,
+          latitude:+p.latitude, longitude:+p.longitude}));
+      }catch(e){}
+      if (!list.length){
+        const r = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${q}&countryCode=US&count=5&language=en&format=json`);
+        list = r.results || [];
+      }
+    } else {
+      const r = await getJSON(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=5&language=en&format=json`);
+      list = r.results || [];
+    }
+    $("results").hidden = false;
+    $("results").innerHTML = list.length ? list.map((p,i) =>
+      `<button type="button" data-i="${i}">${p.name}${p.admin1 ? ", " + p.admin1 : ""}${p.country_code ? " · " + p.country_code : ""}</button>`).join("")
+      : `<div class="status">No places matched “${q}”. Try a nearby city.</div>`;
+    $("results").querySelectorAll("button").forEach(b => b.onclick = () => {
+      const p = list[b.dataset.i];
+      $("results").hidden = true; $("q").value = "";
+      load({name: p.name + (p.admin1 ? ", " + p.admin1 : ""), lat: p.latitude, lon: p.longitude});
+    });
+  }catch(err){ $("status").hidden = false; $("status").textContent = "Search is unavailable right now. Try again shortly."; }
+});
+
+$("locate").addEventListener("click", () => {
+  if(!navigator.geolocation){ $("status").textContent = "This browser cannot share your location. Search for a city instead."; return; }
+  navigator.geolocation.getCurrentPosition(
+    p => load({name:"Current location", lat:p.coords.latitude, lon:p.coords.longitude}),
+    () => { $("status").hidden = false;
+      $("status").textContent = location.protocol === "https:"
+        ? "Location access is turned off for this site. Search for a city or ZIP code instead."
+        : "Your browser only shares location with pages served over https. Search for a city or ZIP code instead."; },
+    {timeout: 10000}
+  );
+});
+
+load(store.get("loc") || {name:"San Diego, California", lat:32.7157, lon:-117.1611});
+</script>
+</body>
+</html>
