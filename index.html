@@ -56,10 +56,13 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted
 .hour .i{font-size:22px;line-height:1.6}
 .hour .p{font-size:12px;color:var(--accent);min-height:18px}
 .days{background:var(--surface);border-radius:14px;overflow:hidden}
-.day{display:grid;grid-template-columns:62px 30px 46px 1fr 110px;gap:10px;align-items:center;padding:11px 14px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.day{display:grid;grid-template-columns:52px minmax(118px,auto) 1fr 96px;gap:12px;align-items:center;padding:11px 14px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
 .day:first-child{border-top:0}
 .day .n{font-weight:500}
-.day .pp{font-size:13px;color:var(--accent)}
+.day .wx{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.day .wx .i{font-size:20px}
+.day .pp{font-size:12px;color:var(--muted);white-space:nowrap}
+.day .pp.wet{color:var(--accent);font-weight:500}
 .bar{height:6px;border-radius:3px;background:var(--line);position:relative}
 .bar span{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--warn))}
 .day .r{text-align:right}
@@ -86,7 +89,7 @@ footer a{color:var(--muted)}
 .moon .facts .v{font-weight:500}
 @media (max-width:600px){ .stats{grid-template-columns:repeat(3,minmax(0,1fr))} }
 @media (max-width:420px){ .stats{grid-template-columns:repeat(2,minmax(0,1fr))} .moon .facts{grid-template-columns:repeat(2,minmax(0,1fr))} }
-@media (max-width:480px){ .day{grid-template-columns:48px 26px 38px 1fr 92px;gap:8px;padding:10px 12px} }
+@media (max-width:480px){ .day{grid-template-columns:44px minmax(104px,auto) 1fr 80px;gap:8px;padding:10px 12px} .day .r i{margin-left:6px} }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -171,7 +174,7 @@ async function load(loc){
   const fUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
     `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,uv_index,dew_point_2m,cloud_cover`+
     `&hourly=temperature_2m,precipitation_probability,weather_code,is_day,visibility`+
-    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,sunrise,sunset`+
+    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,sunrise,sunset`+
     `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=7`;
   const aUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5`;
   try{
@@ -228,8 +231,12 @@ function render(loc, f, a){
     const ww = wmo(d.weather_code[i]);
     const name = i === 0 ? "Today" : new Date(day + "T12:00").toLocaleDateString([], {weekday:"short"});
     const mn = d.temperature_2m_min[i], mx = d.temperature_2m_max[i];
-    const p = d.precipitation_probability_max[i];
-    return `<div class="day"><div class="n">${name}</div><div>${ww.icon}</div><div class="pp">${p >= 20 ? p + "%" : ""}</div>
+    const p = d.precipitation_probability_max[i] ?? 0;
+    const kind = precipKind(d.weather_code[i], (d.rain_sum?.[i] ?? 0) + (d.showers_sum?.[i] ?? 0), d.snowfall_sum?.[i] ?? 0);
+    const amt = d.precipitation_sum?.[i] ?? 0;
+    const detail = `${kind} ${p}%` + (amt >= 0.01 ? ` · ${amt.toFixed(2)} in` : "");
+    return `<div class="day"><div class="n">${name}</div>
+      <div class="wx"><span class="i">${ww.icon}</span><span class="pp${p >= 30 ? " wet" : ""}">${detail}</span></div>
       <div class="bar" title="${ww.label}"><span style="left:${(mn-lo)/span*100}%;right:${(hi-mx)/span*100}%"></span></div>
       <div class="r"><b>${Math.round(mx)}°</b><i>${Math.round(mn)}°</i></div></div>`;
   }).join("");
@@ -245,6 +252,16 @@ function render(loc, f, a){
   $("maps").innerHTML = maps.map(([n,s,hsh]) => `<a href="https://earth.nullschool.net/${hsh}" target="_blank" rel="noopener"><b>${n}</b><span>${s}</span></a>`).join("");
 
   $("status").hidden = true; $("app").hidden = false;
+}
+
+// Precipitation type for the 7-day rows, from the day's weather code and rain and snow totals.
+function precipKind(code, rain, snow){
+  if (snow > 0 && rain > 0) return "Rain and snow";
+  if ([71,73,75,77,85,86].includes(code) || snow > 0) return "Snow";
+  if ([95,96,99].includes(code)) return "Storms";
+  if ([56,57,66,67].includes(code)) return "Freezing rain";
+  if ([51,53,55].includes(code)) return "Drizzle";
+  return "Rain";
 }
 
 // Moon: phase from a fixed reference new moon, rise and set times from SunCalc (BSD-2-Clause, Vladimir Agafonkin).
