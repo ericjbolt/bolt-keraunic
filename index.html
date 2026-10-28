@@ -76,7 +76,8 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted
 .day .r i{font-style:normal;color:var(--muted);margin-left:8px}
 .alert{background:var(--warn-soft);color:var(--warn);border-radius:12px;padding:12px 14px;font-weight:500}
 .alert small{display:block;font-weight:400;color:var(--fg);margin-top:2px}
-.maps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.maps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:600px){ .maps{grid-template-columns:repeat(2,minmax(0,1fr))} }
 .maps a{display:block;padding:14px;border-radius:12px;background:var(--accent-soft);color:var(--fg);text-decoration:none}
 .maps a b{display:block;font-weight:600}
 .maps a span{font-size:13px;color:var(--muted)}
@@ -253,7 +254,10 @@ function render(loc, f, a){
     ["Temperature", "Surface temperature overlay", `#current/wind/surface/level/overlay=temp/${o}`],
     ["Rain", "Three-hour precipitation", `#current/wind/surface/level/overlay=precip_3hr/${o}`],
     ["Ocean waves", "Wave height and swell", `#current/ocean/primary/waves/overlay=significant_wave_height/${o}`],
-    ["Smoke and air", "Fine particulate matter", `#current/particulates/surface/level/overlay=pm2.5/${o}`]
+    ["Smoke and air", "Fine particulate matter", `#current/particulates/surface/level/overlay=pm2.5/${o}`],
+    ["Dust", "Airborne desert dust", `#current/particulates/surface/level/overlay=duexttau/${o}`],
+    ["Carbon monoxide", "From fires and traffic", `#current/chem/surface/level/overlay=cosc/${o}`],
+    ["Sulfur dioxide", "Volcanic and industrial", `#current/chem/surface/level/overlay=so2smass/${o}`]
   ];
   $("maps").innerHTML = maps.map(([n,s,hsh]) => `<a href="https://earth.nullschool.net/${hsh}" target="_blank" rel="noopener"><b>${n}</b><span>${s}</span></a>`).join("");
 
