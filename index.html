@@ -15,14 +15,14 @@
 /* Layout: one calm column. Big current reading, then hourly strip, then week, then live maps. */
 :root{
   --bg:#EDF1F4; --surface:#FFFFFF; --fg:#16212B; --muted:#5D6B78; --line:#D5DDE4;
-  --accent:#1F6F8B; --accent-soft:#DCEBF1; --warn:#B4541A; --warn-soft:#FBE9DD;
+  --accent:#1F6F8B; --accent-soft:#DCEBF1; --warn:#B4541A; --warn-soft:#FBE9DD; --rain:#1F6F8B; --snow:#7A5BC2;
   --display:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
   --body:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#0D1318; --surface:#151E25; --fg:#E6EDF2; --muted:#93A3B0; --line:#25323C;
-         --accent:#6FB8D3; --accent-soft:#16303B; --warn:#F0A06B; --warn-soft:#3A2416; color-scheme:dark; }
+         --accent:#6FB8D3; --accent-soft:#16303B; --warn:#F0A06B; --warn-soft:#3A2416; --rain:#6FB8D3; --snow:#B9A3F0; color-scheme:dark; }
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -33,7 +33,8 @@ body{background:var(--bg);color:var(--fg);font:16px/1.5 var(--body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
 header{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .brand{font-weight:600;letter-spacing:.02em;margin-right:auto}
-form{display:flex;gap:8px;flex:1 1 260px}
+form{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 260px;min-width:0}
+#q{flex:1 1 140px}
 input{flex:1;min-width:0;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg)}
 button{font:inherit;font-weight:500;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
 button.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
@@ -63,6 +64,11 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted
 .day .wx .i{font-size:20px}
 .day .pp{font-size:12px;color:var(--muted);white-space:nowrap}
 .day .pp.wet{color:var(--accent);font-weight:500}
+.strip{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;padding-top:2px}
+.strip .cells{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:2px;height:16px}
+.strip .cells span{border-radius:3px;background:color-mix(in srgb, var(--rain) calc(min(100, var(--p) * 1.4) * 1%), var(--line))}
+.strip.snow .cells span{background:color-mix(in srgb, var(--snow) calc(min(100, var(--p) * 1.4) * 1%), var(--line))}
+.strip .ticks{display:grid;grid-template-columns:repeat(4,1fr) 0;font-size:10px;color:var(--muted);letter-spacing:.02em}
 .bar{height:6px;border-radius:3px;background:var(--line);position:relative}
 .bar span{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--warn))}
 .day .r{text-align:right}
@@ -238,7 +244,7 @@ function render(loc, f, a){
     return `<div class="day"><div class="n">${name}</div>
       <div class="wx"><span class="i">${ww.icon}</span><span class="pp${p >= 30 ? " wet" : ""}">${detail}</span></div>
       <div class="bar" title="${ww.label}"><span style="left:${(mn-lo)/span*100}%;right:${(hi-mx)/span*100}%"></span></div>
-      <div class="r"><b>${Math.round(mx)}°</b><i>${Math.round(mn)}°</i></div></div>`;
+      <div class="r"><b>${Math.round(mx)}°</b><i>${Math.round(mn)}°</i></div>${p >= 20 ? rainStrip(h, day, kind) : ""}</div>`;
   }).join("");
 
   const o = `orthographic=${loc.lon.toFixed(2)},${loc.lat.toFixed(2)},3000`;
@@ -262,6 +268,21 @@ function precipKind(code, rain, snow){
   if ([56,57,66,67].includes(code)) return "Freezing rain";
   if ([51,53,55].includes(code)) return "Drizzle";
   return "Rain";
+}
+
+// A 24-hour strip under each wet day: each cell is one hour, shaded by the chance of precipitation.
+function rainStrip(h, day, kind){
+  const cells = [];
+  for (let hr = 0; hr < 24; hr++){
+    const i = h.time.indexOf(day + "T" + String(hr).padStart(2, "0") + ":00");
+    const p = i >= 0 ? (h.precipitation_probability[i] ?? 0) : 0;
+    const label = (hr === 0 ? "Midnight" : hr === 12 ? "Noon" : (hr % 12) + (hr < 12 ? " AM" : " PM")) + ": " + p + "% chance";
+    cells.push(`<span style="--p:${p}" title="${label}"></span>`);
+  }
+  const snowy = kind === "Snow" || kind === "Rain and snow";
+  return `<div class="strip${snowy ? " snow" : ""}" role="img" aria-label="Hourly chance of ${kind.toLowerCase()} for this day">
+    <div class="cells">${cells.join("")}</div>
+    <div class="ticks"><span>Midnight</span><span>6 AM</span><span>Noon</span><span>6 PM</span><span></span></div></div>`;
 }
 
 // Moon: phase from a fixed reference new moon, rise and set times from SunCalc (BSD-2-Clause, Vladimir Agafonkin).
