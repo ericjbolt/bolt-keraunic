@@ -64,6 +64,14 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted
 .day .wx .i{font-size:20px}
 .day .pp{font-size:12px;color:var(--muted);white-space:nowrap}
 .day .pp.wet{color:var(--accent);font-weight:500}
+.bolt{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;padding:4px 14px 10px;font-size:14px}
+.bolt .row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.bolt .row span:first-child{color:var(--muted)}
+.bolt a{color:var(--accent);font-weight:500}
+.bolt .lvl{font-weight:600}
+.bolt .lvl.mod{color:var(--warn)}
+.bolt .lvl.high{color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
+.bolt p{margin:8px 0 0;font-size:12px;color:var(--muted)}
 .strip{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;padding-top:2px}
 .strip .cells{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:2px;height:16px}
 .strip .cells span{border-radius:3px;background:color-mix(in srgb, var(--rain) calc(min(100, var(--p) * 1.4) * 1%), var(--line))}
@@ -139,6 +147,9 @@ footer a{color:var(--muted)}
     <h2>7 days</h2>
     <div class="days" id="days"></div>
 
+    <h2>Lightning</h2>
+    <div class="bolt" id="bolt"></div>
+
     <h2>Live maps</h2>
     <div class="maps" id="maps"></div>
   </main>
@@ -151,6 +162,7 @@ footer a{color:var(--muted)}
     United States alerts: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>.
     ZIP code lookup: <a href="https://zippopotam.us/" target="_blank" rel="noopener">Zippopotam.us</a>.
     Moon calculations: <a href="https://github.com/mourner/suncalc" target="_blank" rel="noopener">SunCalc</a>.
+    Live lightning map: <a href="https://www.blitzortung.org/" target="_blank" rel="noopener">Blitzortung.org</a> (opens in a new tab).
     Global maps: <a href="https://earth.nullschool.net/" target="_blank" rel="noopener">earth.nullschool.net</a> (opens in a new tab).</p>
     <p style="margin:0">Forecasts are provided for general information only. For official watches and warnings, consult the <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>.</p>
   </footer>
@@ -180,7 +192,7 @@ async function load(loc){
   const {lat, lon} = loc;
   const fUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
     `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,uv_index,dew_point_2m,cloud_cover`+
-    `&hourly=temperature_2m,precipitation_probability,weather_code,is_day,visibility`+
+    `&hourly=temperature_2m,precipitation_probability,weather_code,is_day,visibility,cape`+
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,sunrise,sunset`+
     `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=7`;
   const aUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5`;
@@ -225,6 +237,7 @@ function render(loc, f, a){
   ];
   $("stats").innerHTML = stats.map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
   renderMoon(loc, f.timezone);
+  renderLightning(h, nowIdx, loc);
 
   $("hours").innerHTML = h.time.slice(nowIdx, nowIdx + 24).map((tm, i) => {
     const j = nowIdx + i, ww = wmo(h.weather_code[j], h.is_day[j]);
@@ -287,6 +300,27 @@ function rainStrip(h, day, kind){
   return `<div class="strip${snowy ? " snow" : ""}" role="img" aria-label="Hourly chance of ${kind.toLowerCase()} for this day">
     <div class="cells">${cells.join("")}</div>
     <div class="ticks"><span>Midnight</span><span>6 AM</span><span>Noon</span><span>6 PM</span><span></span></div></div>`;
+}
+
+// Lightning: thunderstorm risk for the next 24 hours from forecast thunderstorm codes and
+// atmospheric instability (CAPE), plus a link to the live strike map from Blitzortung.org.
+function renderLightning(h, nowIdx, loc){
+  const span = [...Array(24).keys()].map(k => nowIdx + k).filter(i => i < h.time.length);
+  const storms = span.filter(i => [95,96,99].includes(h.weather_code[i]));
+  const cape = Math.max(0, ...span.map(i => h.cape?.[i] ?? 0));
+  const stormProb = Math.max(0, ...storms.map(i => h.precipitation_probability[i] ?? 0));
+  let level = "Very low", cls = "low";
+  if ((storms.length && stormProb >= 50) || cape >= 2500){ level = "High"; cls = "high"; }
+  else if (storms.length || cape >= 1000){ level = "Moderate"; cls = "mod"; }
+  else if (cape >= 300){ level = "Low"; cls = "low"; }
+  const first = storms.length ? new Date(h.time[storms[0]]).toLocaleTimeString([], {hour:"numeric"}) : null;
+  const map = `https://map.blitzortung.org/#9/${loc.lat.toFixed(2)}/${loc.lon.toFixed(2)}`;
+  $("bolt").innerHTML = `
+    <div class="row"><span>Thunderstorm risk, next 24 hours</span><b class="lvl ${cls}">${level}</b></div>
+    <div class="row"><span>Atmospheric instability (CAPE)</span><span>${Math.round(cape)} J/kg</span></div>
+    ${first ? `<div class="row"><span>Storms first expected</span><span>${first}</span></div>` : ""}
+    <div class="row"><span>Live strikes near you</span><a href="${map}" target="_blank" rel="noopener">Open live lightning map</a></div>
+    <p>When thunder roars, go indoors. Wait 30 minutes after the last thunder before going back out.</p>`;
 }
 
 // Moon: phase from a fixed reference new moon, rise and set times from SunCalc (BSD-2-Clause, Vladimir Agafonkin).
