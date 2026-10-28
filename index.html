@@ -72,6 +72,33 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted
 .bolt .lvl.mod{color:var(--warn)}
 .bolt .lvl.high{color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
 .bolt p{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.bolt .radar{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center;margin:10px 0 8px;padding:12px;border-radius:12px;background:#0F1A21;color:#6FB8D3}
+.bolt .radar.mod{color:#F0A06B}
+.bolt .radar.high{color:#FF6B5A}
+.bolt .radar svg{width:150px;height:150px;display:block}
+.bolt .radar .ring{fill:none;stroke:currentColor;stroke-opacity:.35;stroke-width:1}
+.bolt .radar .r15{stroke-opacity:.9;stroke-width:1.5;stroke-dasharray:4 4}
+.bolt .radar .axis{stroke:currentColor;stroke-opacity:.15}
+.bolt .radar .sweep{transform-origin:100px 100px;animation:sweep 6s linear infinite}
+.bolt .radar.mod .sweep{animation-duration:3.5s}
+.bolt .radar.high .sweep{animation-duration:2s}
+.bolt .radar .sweep path{fill:currentColor;fill-opacity:.22}
+.bolt .radar .me{fill:#FFFFFF}
+.bolt .radar text{fill:currentColor;fill-opacity:.7;font-size:9px;font-family:var(--body)}
+.bolt .radar.high .r15{animation:pulse 1.6s ease-in-out infinite}
+.bolt .radar-text{display:flex;flex-direction:column;gap:2px;min-width:0;color:#C9D6DF;font-size:13px}
+.bolt .radar-text .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#93A3B0}
+.bolt .radar-text b{font-size:24px;font-weight:600;color:currentColor}
+.bolt .radar.low .radar-text b{color:#6FB8D3}
+.bolt .radar.mod .radar-text b{color:#F0A06B}
+.bolt .radar.high .radar-text b{color:#FF6B5A}
+.bolt .live-cta{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:10px;background:var(--accent-soft);color:var(--fg);text-decoration:none;font-weight:600}
+.bolt .live-cta span{font-size:12px;font-weight:400;color:var(--muted)}
+.bolt .live-cta:hover{outline:1px solid var(--accent)}
+@keyframes sweep{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{stroke-opacity:.3}}
+@media (max-width:420px){ .bolt .radar{grid-template-columns:120px 1fr;gap:12px} .bolt .radar svg{width:120px;height:120px} }
+@media (prefers-reduced-motion:reduce){ .bolt .radar .sweep, .bolt .radar .r15{animation:none} }
 .strip{grid-column:1/-1;display:flex;flex-direction:column;gap:3px;padding-top:2px}
 .strip .cells{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:2px;height:16px}
 .strip .cells span{border-radius:3px;background:color-mix(in srgb, var(--rain) calc(min(100, var(--p) * 1.4) * 1%), var(--line))}
@@ -302,8 +329,8 @@ function rainStrip(h, day, kind){
     <div class="ticks"><span>Midnight</span><span>6 AM</span><span>Noon</span><span>6 PM</span><span></span></div></div>`;
 }
 
-// Lightning: thunderstorm risk for the next 24 hours from forecast thunderstorm codes and
-// atmospheric instability (CAPE), plus a link to the live strike map from Blitzortung.org.
+// Lightning: thunderstorm risk within the next 24 hours, drawn as a 15-mile radar-style graphic.
+// The graphic uses only this app's forecast data. Live strikes are left to Blitzortung.org via a link.
 function renderLightning(h, nowIdx, loc){
   const span = [...Array(24).keys()].map(k => nowIdx + k).filter(i => i < h.time.length);
   const storms = span.filter(i => [95,96,99].includes(h.weather_code[i]));
@@ -316,10 +343,25 @@ function renderLightning(h, nowIdx, loc){
   const first = storms.length ? new Date(h.time[storms[0]]).toLocaleTimeString([], {hour:"numeric"}) : null;
   const map = `https://map.blitzortung.org/#9/${loc.lat.toFixed(2)}/${loc.lon.toFixed(2)}`;
   $("bolt").innerHTML = `
-    <div class="row"><span>Thunderstorm risk, next 24 hours</span><b class="lvl ${cls}">${level}</b></div>
-    <div class="row"><span>Atmospheric instability (CAPE)</span><span>${Math.round(cape)} J/kg</span></div>
-    ${first ? `<div class="row"><span>Storms first expected</span><span>${first}</span></div>` : ""}
-    <div class="row"><span>Live strikes near you</span><a href="${map}" target="_blank" rel="noopener">Open live lightning map</a></div>
+    <div class="radar ${cls}" role="img" aria-label="Thunderstorm risk within 15 miles over the next 24 hours: ${level}">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <defs><radialGradient id="glow"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs>
+        <circle cx="100" cy="100" r="92" fill="url(#glow)"/>
+        <circle cx="100" cy="100" r="92" class="ring r15"/>
+        <circle cx="100" cy="100" r="61" class="ring"/>
+        <circle cx="100" cy="100" r="31" class="ring"/>
+        <line x1="100" y1="6" x2="100" y2="194" class="axis"/><line x1="6" y1="100" x2="194" y2="100" class="axis"/>
+        <g class="sweep"><path d="M100 100 L100 8 A92 92 0 0 1 165.1 34.9 Z"/></g>
+        <text x="104" y="66">5</text><text x="104" y="36">10</text><text x="104" y="15">15 mi</text>
+        <circle cx="100" cy="100" r="4" class="me"/>
+      </svg>
+      <div class="radar-text">
+        <span class="k">Thunderstorm risk · 15 miles · 24 hours</span>
+        <b>${level}</b>
+        <span>Instability ${Math.round(cape)} J/kg${first ? " · storms possible from " + first : ""}</span>
+      </div>
+    </div>
+    <a class="live-cta" href="${map}" target="_blank" rel="noopener">⚡ See live lightning strikes<span>Real-time detections from the Blitzortung.org volunteer network</span></a>
     <p>When thunder roars, go indoors. Wait 30 minutes after the last thunder before going back out.</p>`;
 }
 
