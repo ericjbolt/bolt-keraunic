@@ -16,13 +16,14 @@
 :root{
   --bg:#EDF1F4; --surface:#FFFFFF; --fg:#16212B; --muted:#5D6B78; --line:#D5DDE4;
   --accent:#1F6F8B; --accent-soft:#DCEBF1; --warn:#B4541A; --warn-soft:#FBE9DD; --rain:#1F6F8B; --snow:#7A5BC2;
+  --fire-low:#4E8A5B; --fire-mod:#C98A12; --fire-high:#D2551E; --fire-ext:#B3122E;
   --display:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
   --body:"Figtree", -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#0D1318; --surface:#151E25; --fg:#E6EDF2; --muted:#93A3B0; --line:#25323C;
-         --accent:#6FB8D3; --accent-soft:#16303B; --warn:#F0A06B; --warn-soft:#3A2416; --rain:#6FB8D3; --snow:#B9A3F0; color-scheme:dark; }
+         --accent:#6FB8D3; --accent-soft:#16303B; --warn:#F0A06B; --warn-soft:#3A2416; --rain:#6FB8D3; --snow:#B9A3F0; --fire-low:#7CC08A; --fire-mod:#F2B544; --fire-high:#FF7A3D; --fire-ext:#FF4D6A; color-scheme:dark; }
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -72,6 +73,31 @@ h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted
 .bolt .lvl.mod{color:var(--warn)}
 .bolt .lvl.high{color:var(--warn);text-transform:uppercase;letter-spacing:.04em}
 .bolt p{margin:8px 0 0;font-size:12px;color:var(--muted)}
+.fireb{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;padding:4px 14px 10px;font-size:14px}
+.fireb .row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.fireb .row span:first-child{color:var(--muted)}
+.fireb .row.sub{font-size:12px;padding-top:4px;color:var(--muted)}
+.fireb a{color:var(--accent);font-weight:500}
+.fireb .lvl{font-weight:600}
+.fireb .lvl.low{color:var(--fire-low)}
+.fireb .lvl.mod{color:var(--fire-mod)}
+.fireb .lvl.high{color:var(--fire-high)}
+.fireb .lvl.ext{color:var(--fire-ext);text-transform:uppercase;letter-spacing:.04em}
+.fstrip{display:grid;grid-template-columns:repeat(24,minmax(0,1fr));gap:2px;height:12px;margin-top:8px}
+.fstrip span{border-radius:3px}
+.fstrip .low{background:var(--fire-low);opacity:.35}
+.fstrip .mod{background:var(--fire-mod)}
+.fstrip .high{background:var(--fire-high)}
+.fstrip .ext{background:var(--fire-ext)}
+.fires{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.fires .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.fires .muted{color:var(--muted)}
+.fire{display:grid;grid-template-columns:10px 1fr;column-gap:8px;align-items:center}
+.fire .dot{width:8px;height:8px;border-radius:50%;background:var(--fire-high)}
+.fire .dot.near{background:var(--fire-ext);box-shadow:0 0 0 3px color-mix(in srgb, var(--fire-ext) 25%, transparent)}
+.fire .name{font-weight:500}
+.fire .meta{grid-column:2;font-size:12px;color:var(--muted)}
+.fireb p{margin:8px 0 0;font-size:12px;color:var(--muted)}
 .bolt .radar{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center;margin:10px 0 8px;padding:12px;border-radius:12px;background:#0F1A21;color:#6FB8D3}
 .bolt .radar.mod{color:#F0A06B}
 .bolt .radar.high{color:#FF6B5A}
@@ -177,6 +203,9 @@ footer a{color:var(--muted)}
     <h2>Lightning</h2>
     <div class="bolt" id="bolt"></div>
 
+    <h2>Fire</h2>
+    <div class="fireb" id="fire"></div>
+
     <h2>Live maps</h2>
     <div class="maps" id="maps"></div>
   </main>
@@ -189,6 +218,7 @@ footer a{color:var(--muted)}
     United States alerts: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>.
     ZIP code lookup: <a href="https://zippopotam.us/" target="_blank" rel="noopener">Zippopotam.us</a>.
     Moon calculations: <a href="https://github.com/mourner/suncalc" target="_blank" rel="noopener">SunCalc</a>.
+    Wildfire incidents: <a href="https://data-nifc.opendata.arcgis.com/" target="_blank" rel="noopener">National Interagency Fire Center</a>.
     Live lightning map: <a href="https://www.blitzortung.org/" target="_blank" rel="noopener">Blitzortung.org</a> (opens in a new tab).
     Global maps: <a href="https://earth.nullschool.net/" target="_blank" rel="noopener">earth.nullschool.net</a> (opens in a new tab).</p>
     <p style="margin:0">Forecasts are provided for general information only. For official watches and warnings, consult the <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a>.</p>
@@ -219,7 +249,7 @@ async function load(loc){
   const {lat, lon} = loc;
   const fUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`+
     `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,uv_index,dew_point_2m,cloud_cover`+
-    `&hourly=temperature_2m,precipitation_probability,weather_code,is_day,visibility,cape`+
+    `&hourly=temperature_2m,precipitation_probability,weather_code,is_day,visibility,cape,relative_humidity_2m,wind_speed_10m`+
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,rain_sum,showers_sum,snowfall_sum,sunrise,sunset`+
     `&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch&timezone=auto&forecast_days=7`;
   const aUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm2_5`;
@@ -265,6 +295,7 @@ function render(loc, f, a){
   $("stats").innerHTML = stats.map(([k,v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("");
   renderMoon(loc, f.timezone);
   renderLightning(h, nowIdx, loc);
+  renderFire(h, nowIdx, loc);
 
   $("hours").innerHTML = h.time.slice(nowIdx, nowIdx + 24).map((tm, i) => {
     const j = nowIdx + i, ww = wmo(h.weather_code[j], h.is_day[j]);
@@ -363,6 +394,68 @@ function renderLightning(h, nowIdx, loc){
     </div>
     <a class="live-cta" href="${map}" target="_blank" rel="noopener">⚡ See live lightning strikes<span>Real-time detections from the Blitzortung.org volunteer network</span></a>
     <p>When thunder roars, go indoors. Wait 30 minutes after the last thunder before going back out.</p>`;
+}
+
+// Fire: fire weather from the Fosberg Fire Weather Index (temperature, humidity, and wind),
+// National Weather Service fire alerts, and active wildfires from the National Interagency Fire Center.
+function fosberg(tempF, rh, windMph){
+  let m;
+  if (rh < 10) m = 0.03229 + 0.281073 * rh - 0.000578 * rh * tempF;
+  else if (rh < 50) m = 2.22749 + 0.160107 * rh - 0.01478 * tempF;
+  else m = 21.0606 + 0.005565 * rh * rh - 0.00035 * rh * tempF - 0.483199 * rh;
+  const x = m / 30, eta = 1 - 2 * x + 1.5 * x * x - 0.5 * x * x * x;
+  return Math.max(0, Math.min(100, eta * Math.sqrt(1 + windMph * windMph) / 0.3002));
+}
+const fireLevel = v => v >= 75 ? ["Extreme","ext"] : v >= 50 ? ["High","high"] : v >= 30 ? ["Moderate","mod"] : ["Low","low"];
+function milesBetween(a, b, c, d){
+  const r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2;
+  return 3958.8 * 2 * Math.asin(Math.sqrt(x));
+}
+function bearing(a, b, c, d){
+  const r = Math.PI / 180, y = Math.sin((d - b) * r) * Math.cos(c * r);
+  const x = Math.cos(a * r) * Math.sin(c * r) - Math.sin(a * r) * Math.cos(c * r) * Math.cos((d - b) * r);
+  return compass((Math.atan2(y, x) / r + 360) % 360);
+}
+async function renderFire(h, nowIdx, loc){
+  const span = [...Array(24).keys()].map(k => nowIdx + k).filter(i => i < h.time.length);
+  const vals = span.map(i => fosberg(h.temperature_2m[i], h.relative_humidity_2m?.[i] ?? 50, h.wind_speed_10m?.[i] ?? 0));
+  const peak = Math.max(...vals), pk = span[vals.indexOf(peak)];
+  const [level, cls] = fireLevel(peak);
+  const peakTime = new Date(h.time[pk]).toLocaleTimeString([], {hour:"numeric"});
+  const cells = span.map((i, k) => {
+    const label = new Date(h.time[i]).toLocaleTimeString([], {hour:"numeric"}) + ": fire weather " + fireLevel(vals[k])[0].toLowerCase();
+    return `<span class="${fireLevel(vals[k])[1]}" title="${label}"></span>`;
+  }).join("");
+  $("fire").innerHTML = `
+    <div class="row"><span>Fire weather, next 24 hours</span><b class="lvl ${cls}">${level}</b></div>
+    <div class="fstrip" role="img" aria-label="Hourly fire weather for the next 24 hours, peaking ${level.toLowerCase()} around ${peakTime}">${cells}</div>
+    <div class="row sub"><span>Peak around ${peakTime}</span><span>${h.relative_humidity_2m?.[pk] ?? "–"}% humidity · ${Math.round(h.wind_speed_10m?.[pk] ?? 0)} mph wind</span></div>
+    <div class="row"><span>Red flag status</span><span id="redflag">Checking…</span></div>
+    <div class="fires" id="fires"><span class="muted">Checking for active wildfires within 50 miles…</span></div>
+    <div class="row"><span>Official updates</span><span><a href="https://www.fire.ca.gov/incidents" target="_blank" rel="noopener">CAL FIRE</a> · <a href="https://inciweb.wildfire.gov/" target="_blank" rel="noopener">InciWeb</a></span></div>
+    <p>Follow evacuation orders from local officials. Sign up for your county's emergency alerts.</p>`;
+  try{
+    const r = await getJSON(`https://api.weather.gov/alerts/active?point=${loc.lat.toFixed(4)},${loc.lon.toFixed(4)}`);
+    const ev = (r.features || []).map(x => x.properties.event);
+    $("redflag").innerHTML = ev.includes("Red Flag Warning") ? '<b class="lvl ext">Red Flag Warning</b>'
+      : ev.includes("Fire Weather Watch") ? '<b class="lvl high">Fire Weather Watch</b>' : "None in effect";
+  }catch(e){ $("redflag").textContent = "Unavailable outside the United States"; }
+  try{
+    const base = "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Incident_Locations_Current/FeatureServer/0/query";
+    const q = `?where=IncidentTypeCategory%3D'WF'&geometry=${loc.lon},${loc.lat}&geometryType=esriGeometryPoint&inSR=4326&distance=50&units=esriSRUnit_StatuteMile&outFields=IncidentName,IncidentSize,PercentContained,FireDiscoveryDateTime&returnGeometry=true&outSR=4326&f=json`;
+    const res = await getJSON(base + q);
+    const list = (res.features || [])
+      .filter(f => (f.attributes.PercentContained ?? 0) < 100)
+      .map(f => ({...f.attributes, mi: milesBetween(loc.lat, loc.lon, f.geometry.y, f.geometry.x), dir: bearing(loc.lat, loc.lon, f.geometry.y, f.geometry.x)}))
+      .sort((a, b) => a.mi - b.mi).slice(0, 5);
+    const title = n => n.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    $("fires").innerHTML = list.length
+      ? `<span class="k">Active wildfires within 50 miles</span>` + list.map(f => `<div class="fire">
+          <span class="dot${f.mi < 10 ? " near" : ""}"></span>
+          <span class="name">${title(f.IncidentName)}</span>
+          <span class="meta">${f.mi < 1 ? "Under 1" : Math.round(f.mi)} mi ${f.dir} · ${f.IncidentSize ? Math.round(f.IncidentSize).toLocaleString() + " acres" : "size not reported"}${f.PercentContained != null ? " · " + Math.round(f.PercentContained) + "% contained" : ""}</span></div>`).join("")
+      : '<span class="muted">No active wildfires reported within 50 miles.</span>';
+  }catch(e){ $("fires").innerHTML = '<span class="muted">Wildfire incident data is unavailable right now.</span>'; }
 }
 
 // Moon: phase from a fixed reference new moon, rise and set times from SunCalc (BSD-2-Clause, Vladimir Agafonkin).
